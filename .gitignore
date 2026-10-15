@@ -1,0 +1,11 @@
+# Plaintext secrets. Only encrypted *.sops.env files may be committed.
+secrets.env
+*.dec
+*.decrypted
+.env
+stack.env
+
+# age private keys
+*.agekey
+age.key
+keys.txt

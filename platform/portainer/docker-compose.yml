@@ -1,0 +1,17 @@
+# Portainer CE — applied by bootstrap.sh with `docker compose -p portainer`,
+# deliberately NOT as a Portainer stack (a stack that updates Portainer would
+# kill its own deployer mid-update). To upgrade: merge the Renovate PR, pull
+# on the host, re-run bootstrap.sh.
+services:
+  portainer:
+    image: portainer/portainer-ce:2.45.2@sha256:03f94a406496dc84d37b552795fc424ccad8d0d7200353b6a82915f6e8f73ab0
+    container_name: portainer
+    restart: unless-stopped
+    # -H makes Portainer create the local Docker environment itself once the
+    # admin user exists, so bootstrap never has to.
+    command: -H unix:///var/run/docker.sock
+    ports:
+      - "9443:9443"   # UI + API (self-signed TLS)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${PORTAINER_DATA_DIR:?set PORTAINER_DATA_DIR}:/data
