@@ -65,7 +65,7 @@ On a fresh host, after bootstrap has deployed the stack:
 2. Restore into the same or a newer controller version, never an older one.
 3. Devices reconnect on their own if the controller keeps the same IP. If the IP
    changed, set the controller address on each device or re-adopt it. This is
-   why the host needs a fixed IP.
+   why the host should keep a stable IP.
 
 ## Ports (host network)
 

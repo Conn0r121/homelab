@@ -136,5 +136,10 @@ Bootstrap installs avahi, so each host answers as `<hostname>.local` over
 mDNS. Windows resolves `.local` names natively. The Spectrum router may not
 allow local DNS records, so mDNS is the zero-infrastructure option.
 
-Hosts still need a **fixed IP**, via a DHCP reservation or a static netplan
-config. Omada devices find their controller by IP.
+Hosts should keep a stable IP, because Omada devices find their controller by
+IP. The Spectrum router can't do DHCP reservations, so for now the Mac mini
+stays on plain DHCP. An always-on wired host keeps its lease in practice. A
+static netplan address was rejected because the router's DHCP pool isn't
+visible, so a static address could collide with one the router hands out.
+The planned fix is an Omada gateway behind the Spectrum router, which gives
+reservations, local DNS and VLANs.
