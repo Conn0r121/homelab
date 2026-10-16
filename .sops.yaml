@@ -1,7 +1,7 @@
-# sops encryption rules. Replace the recipient with YOUR age public key
-# (`age-keygen` prints it as "Public key: age1...") before creating secrets.
+# sops encryption rules. The recipient is the homelab age public key
+# (private key: password manager + /etc/homelab/age.key on each host).
 # One key for now; per-host keys can be added later as extra rules plus
 # `sops updatekeys`.
 creation_rules:
   - path_regex: secrets\.sops\.env$
-    age: age1REPLACE_WITH_YOUR_AGE_PUBLIC_KEY
+    age: age1046cx3ar84rm20m4525wrkth6nafjs6k2tehyhvhwgeqqkhhwqmqkvvluq
