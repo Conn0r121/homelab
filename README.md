@@ -76,8 +76,10 @@ winget install --id SecretsOPerationS.SOPS
 
 Prerequisites:
 - Ubuntu Server (22.04 or 24.04), wired network.
-- A **fixed IP**, either a DHCP reservation on the router or static netplan.
-  Omada devices find the controller by IP.
+- A stable IP. A DHCP reservation is best. Without one (the current Spectrum
+  router can't do reservations), plain DHCP is fine for an always-on wired host,
+  as long as you use `<hostname>.local` instead of the IP. If the address ever
+  changes, Omada devices may need to be reconnected to the controller.
 - `hosts/<hostname>/` exists in the repo with `host.env` and `secrets.sops.env`.
 
 On the host:
