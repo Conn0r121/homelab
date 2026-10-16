@@ -1,0 +1,29 @@
+# Omada Software Controller — community image mbentley/omada-controller.
+# Host-specific values (TZ, paths) come from stack.env; see stack.env.example.
+#
+# Upgrades are one-way: the controller cannot be downgraded after it migrates
+# its database. Download a backup (Settings > Maintenance > Backup) before
+# merging a Renovate PR for this image.
+services:
+  omada-controller:
+    image: mbentley/omada-controller:6.3.0.45@sha256:5f53ff9dcaeb21bd183fa02f745c49a751325c30d7ee693567cffbaca5cebd4e
+    container_name: omada-controller
+    restart: unless-stopped
+    # Device discovery and adoption rely on L2 broadcast; upstream recommends
+    # host networking because bridge mode often breaks adoption.
+    network_mode: host
+    # Give the embedded MongoDB time to shut down cleanly.
+    stop_grace_period: 60s
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+    environment:
+      TZ: ${TZ:?set TZ}
+      SHOW_SERVER_LOGS: "true"
+      SHOW_MONGODB_LOGS: "false"
+      # All ports stay at upstream defaults: UI 8043 (https) / 8088 (http),
+      # portal 8843, discovery 27001/udp + 29810/udp, device mgmt 29811-29817/tcp.
+    volumes:
+      - ${DATA_DIR:?set DATA_DIR}:/opt/tplink/EAPController/data
+      - ${LOGS_DIR:?set LOGS_DIR}:/opt/tplink/EAPController/logs
