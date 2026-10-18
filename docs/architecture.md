@@ -39,17 +39,20 @@ could be revisited later.
 - There is one key for now. Per-host keys can be added later as extra
   `creation_rules` in `.sops.yaml`, then running `sops updatekeys`.
 
-## 4. Private repo; Portainer authenticates with a fine-grained PAT
+## 4. Public repo; no Git credentials anywhere
 
-The repo reveals the service inventory and layout even with secrets encrypted,
-so it is private.
+The repo is public. Secrets are sops-encrypted, so what's visible is the
+service inventory, folder layout, time zone and the *names* of secret keys.
+There are no IPs and no secret values.
 
-Portainer clones over HTTPS with a fine-grained PAT, scoped to this repo only
-with *Contents: read-only*. The PAT is stored in sops. Rotating it means:
-`sops edit`, commit, re-run bootstrap.
+In exchange, there's no Git authentication at all: Portainer and the host
+checkout clone anonymously, so there's no token to expire, rotate or lose. The
+repo started private with a fine-grained PAT. That PAT was the main source of
+friction, so it was dropped.
 
-SSH deploy keys were rejected because Portainer's documented Git
-authentication path is HTTPS with username and token.
+If the repo ever goes private again, set `PORTAINER_GIT_USERNAME` and
+`PORTAINER_GIT_TOKEN` in a host's secrets. Bootstrap passes them to the
+Portainer Git source when present.
 
 ## 5. Polling every 5 minutes, not webhooks
 
@@ -67,7 +70,7 @@ re-pull is off.
 
 ```
 hosts/<host>/host.env         non-secret: TZ, paths, STACKS, repo URL
-hosts/<host>/secrets.sops.env secret: Portainer admin, Git PAT, DB passwords
+hosts/<host>/secrets.sops.env secret: Portainer admin, DB passwords
 stacks/<s>/stack.env.example  which keys stack <s> receives
 ```
 

@@ -107,21 +107,22 @@ portainer_ensure_git_source() {
   [[ $PT_STATUS == 200 ]] || pt_fail "listing git sources failed"
   PT_SOURCE_ID=$(U=$url jq -r '[.[] | select(.url == env.U)][0].id // empty' "$PT_RESP")
 
+  # Credentials are optional: the repo is public, so Portainer clones
+  # anonymously unless PORTAINER_GIT_TOKEN is set (e.g. if it goes private).
   export SRC_URL=$url SRC_INTERVAL=$interval
-  export SRC_USER; SRC_USER=$(env_get PORTAINER_GIT_USERNAME)
-  export SRC_TOKEN; SRC_TOKEN=$(env_get PORTAINER_GIT_TOKEN)
+  export SRC_USER; SRC_USER=$(env_get PORTAINER_GIT_USERNAME "")
+  export SRC_TOKEN; SRC_TOKEN=$(env_get PORTAINER_GIT_TOKEN "")
+  local auth='if env.SRC_TOKEN != "" then {authentication: {username: env.SRC_USER, password: env.SRC_TOKEN}} else {} end'
   if [[ -z $PT_SOURCE_ID ]]; then
-    jq -n '{name: "homelab", url: env.SRC_URL, interval: env.SRC_INTERVAL,
-            administratorsOnly: true,
-            authentication: {username: env.SRC_USER, password: env.SRC_TOKEN}}' > "$HL_TMP/body.json"
+    jq -n "{name: \"homelab\", url: env.SRC_URL, interval: env.SRC_INTERVAL,
+            administratorsOnly: true} + ($auth)" > "$HL_TMP/body.json"
     pt_api POST /gitops/sources/git "$HL_TMP/body.json"
     [[ $PT_STATUS == 201 ]] || pt_fail "creating git source failed"
     PT_SOURCE_ID=$(jq -r .id "$PT_RESP")
-    ok "git source created (id=$PT_SOURCE_ID, polling every $interval)"
+    ok "git source created (id=$PT_SOURCE_ID, polling every $interval${SRC_TOKEN:+, authenticated})"
   else
-    # Always push credentials + interval so a rotated PAT is applied on re-run.
-    jq -n '{interval: env.SRC_INTERVAL,
-            authentication: {username: env.SRC_USER, password: env.SRC_TOKEN}}' > "$HL_TMP/body.json"
+    # Always push the interval (and credentials, if any) so changes apply on re-run.
+    jq -n "{interval: env.SRC_INTERVAL} + ($auth)" > "$HL_TMP/body.json"
     pt_api PUT "/gitops/sources/$PT_SOURCE_ID" "$HL_TMP/body.json"
     [[ $PT_STATUS == 200 ]] || pt_fail "updating git source failed"
     ok "git source up to date (id=$PT_SOURCE_ID, polling every $interval)"
