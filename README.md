@@ -56,12 +56,7 @@ winget install --id SecretsOPerationS.SOPS
    keep it at `%APPDATA%\sops\age\keys.txt` so sops on this PC can decrypt.
    Put the printed public key (`age1…`) into `.sops.yaml` and commit it. The
    public key is not secret.
-2. **Create a fine-grained PAT** for Portainer at GitHub → Settings → Developer
-   settings → Fine-grained tokens:
-   - Repository access: only `homelab`
-   - Permissions: Contents → Read-only
-   - Choose an expiry and put a reminder in your calendar.
-3. **Write the host's secrets.** This opens an editor and saves the file
+2. **Write the host's secrets.** This opens an editor and saves the file
    encrypted, so plaintext never touches disk. Keys are listed in
    [hosts/_template/secrets.env.example](hosts/_template/secrets.env.example).
    ```bash
@@ -69,7 +64,7 @@ winget install --id SecretsOPerationS.SOPS
    ```
    On Windows, set an editor first, e.g. `$env:EDITOR = "code --wait"`.
    Commit the encrypted file.
-4. **Enable Renovate:** install the [Renovate GitHub App](https://github.com/apps/renovate)
+3. **Enable Renovate:** install the [Renovate GitHub App](https://github.com/apps/renovate)
    on this repo only. It reads `renovate.json` and opens a dependency dashboard issue.
 
 ## Bootstrap a new host
@@ -85,8 +80,7 @@ Prerequisites:
 On the host:
 
 ```bash
-# 1. Clone. Git asks for credentials: use your GitHub username and a PAT with
-#    read access to this repo (the Portainer PAT works). They aren't stored.
+# 1. Clone (public repo, no credentials needed).
 sudo git clone https://github.com/Conn0r121/homelab.git /opt/homelab
 
 # 2. Install the age private key (paste the full key file contents, then Ctrl-D).
@@ -125,7 +119,6 @@ one:
 | Change a host setting or secret | Edit `host.env` / `sops edit …secrets.sops.env`, merge, then on the host: `cd /opt/homelab && sudo git pull && sudo ./bootstrap.sh <host>` |
 | Upgrade an image | Review and merge the Renovate PR (read the stack README's upgrade notes first). |
 | Upgrade Portainer | Merge the Renovate PR, then `git pull` and re-run bootstrap on each host. |
-| Rotate the Portainer PAT | Create a new PAT, `sops edit` it in, merge, re-run bootstrap (it updates the Git source). |
 | Validate before pushing | `./scripts/validate.sh` (needs Docker; shellcheck is optional locally). |
 
 ## Add a stack
@@ -146,7 +139,7 @@ Portainer 2.45:
 
 1. Create the data directories on the host (e.g. `sudo mkdir -p /srv/omada/{data,logs}`).
 2. **Stacks → Add stack → Repository.** Use (or create) a Git source for
-   `https://github.com/Conn0r121/homelab.git` with your username and the PAT,
+   `https://github.com/Conn0r121/homelab.git` (no authentication, it's public)
    and set polling to `5m`.
 3. Reference `refs/heads/main`, compose path `stacks/<name>/docker-compose.yml`.
 4. Under environment variables, add every key from `stack.env.example` with
