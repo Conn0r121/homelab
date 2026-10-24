@@ -8,8 +8,8 @@ on the official v3.3.5 compose file. The header of
 |---|---|
 | UI / mobile app | `http://<host>.local:2283` |
 | Containers | `immich_server`, `immich_postgres`, `immich_redis`, `immich_machine_learning` (only with the `ml` profile) |
-| Photos | `${UPLOAD_LOCATION}` (default `/srv/immich/library`) |
-| Database | `${DB_DATA_LOCATION}` (default `/srv/immich/postgres`), local disk only, never a network share |
+| Photos | `${UPLOAD_LOCATION}` (Mac mini: `/mnt/data/immich`) |
+| Database | `${DB_DATA_LOCATION}` (Mac mini: `/srv/immich/postgres`), local disk only, never a network share |
 | Requirements | 6 GB RAM minimum (8 GB recommended) with ML; around 4 GB with ML off |
 
 ## Settings
@@ -126,7 +126,7 @@ On a fresh host, or after losing the database:
    ```
 4. **Load the newest dump** (from Immich's documented restore procedure):
    ```bash
-   DUMP=$(ls -t /srv/immich/library/backups/*.sql.gz | head -n 1)
+   DUMP=$(ls -t /mnt/data/immich/backups/*.sql.gz | head -n 1)
    gunzip --stdout "$DUMP" \
      | sed "s/SELECT pg_catalog.set_config('search_path', '', false);/SELECT pg_catalog.set_config('search_path', 'public, pg_catalog', true);/g" \
      | docker exec -i immich_postgres psql --dbname=immich --username=postgres --single-transaction --set ON_ERROR_STOP=on
