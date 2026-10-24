@@ -96,6 +96,10 @@ host if missing. Existing directories are never re-owned.
 - The same file is also passed as `--env-file`, so `${VAR}` interpolation
   works too. Omada uses interpolation; Immich will use `env_file:`, following
   the upstream compose file.
+- `COMPOSE_PROFILES` set in `stack.env` is honored: Portainer loads the env
+  file and then applies default profiles from it (`cli.WithDotEnv`, then
+  `cli.WithDefaultProfiles()`). Immich uses this to make machine learning
+  optional per host.
 - A `.env` next to a compose file would be merged into `stack.env` by
   Portainer. `.env` is gitignored for that reason.
 - Relative bind mounts that pull files out of the repo (Portainer's "relative
