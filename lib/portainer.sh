@@ -259,7 +259,12 @@ deploy_stack() {
   jq -n '{RepositoryReferenceName: env.ST_REF, Env: (env.ST_ENV | fromjson),
           Prune: false, RepullImageAndRedeploy: false}' > "$HL_TMP/body.json"
   pt_api PUT "/stacks/$id/git/redeploy?endpointId=$PT_ENDPOINT_ID" "$HL_TMP/body.json"
-  [[ $PT_STATUS == 200 ]] || pt_fail "redeploying stack '$stack' failed"
+  if [[ $PT_STATUS == 409 ]] && grep -qi 'already in progress' "$PT_RESP"; then
+    # Portainer's own Git poll got there first (e.g. right after a merge).
+    info "$stack: Portainer is already deploying it; waiting for that instead"
+  elif [[ $PT_STATUS != 200 ]]; then
+    pt_fail "redeploying stack '$stack' failed"
+  fi
   # Like create, a Compose redeploy runs asynchronously in Portainer.
   if ((containers == 0)); then
     if wait_for_containers "$stack" 600; then
