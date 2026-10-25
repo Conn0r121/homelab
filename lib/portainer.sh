@@ -48,9 +48,21 @@ portainer_wait() {
   for _ in $(seq 1 60); do
     pt_api GET /system/status
     [[ $PT_STATUS == 200 ]] && { ok "API up ($(jq -r .Version "$PT_RESP"))"; return; }
+    # 303 = no admin was created within 5 minutes of startup, so Portainer
+    # disabled itself. Only a restart re-opens it.
+    if [[ $PT_STATUS == 303 ]]; then
+      info "Portainer locked itself (admin init timeout); restarting it"
+      portainer_restart
+    fi
     sleep 2
   done
   die "Portainer API did not come up at $PORTAINER_URL"
+}
+
+PT_RESTARTED=0
+portainer_restart() {
+  docker restart portainer >/dev/null
+  PT_RESTARTED=1
 }
 
 portainer_ensure_admin() {
@@ -61,9 +73,11 @@ portainer_ensure_admin() {
   # 5 minutes, and (since 2.45) admin init needs the one-time setup token it
   # prints at startup. Restart for a fresh window and token, then read the
   # token back from the container logs.
-  info "no admin yet; restarting Portainer for a fresh setup window"
-  docker restart portainer >/dev/null
-  portainer_wait
+  if ((!PT_RESTARTED)); then
+    info "no admin yet; restarting Portainer for a fresh setup window"
+    portainer_restart
+    portainer_wait
+  fi
   pt_api GET /users/admin/check
   [[ $PT_STATUS == 404 ]] || pt_fail "admin check failed after restart"
 
