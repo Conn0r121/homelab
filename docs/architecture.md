@@ -96,6 +96,10 @@ host if missing. Existing directories are never re-owned.
 - The same file is also passed as `--env-file`, so `${VAR}` interpolation
   works too. Omada uses interpolation; Immich will use `env_file:`, following
   the upstream compose file.
+- `COMPOSE_PROFILES` set in `stack.env` is honored: Portainer loads the env
+  file and then applies default profiles from it (`cli.WithDotEnv`, then
+  `cli.WithDefaultProfiles()`). Immich uses this to make machine learning
+  optional per host.
 - A `.env` next to a compose file would be merged into `stack.env` by
   Portainer. `.env` is gitignored for that reason.
 - Relative bind mounts that pull files out of the repo (Portainer's "relative
@@ -105,7 +109,16 @@ host if missing. Existing directories are never re-owned.
 
 ## 7. Storage: paths are host settings
 
-Every data path is a `host.env` value. On the Mac mini the plan is:
+Every data path is a `host.env` value, split by kind:
+
+```
+/srv/<app>/    app state and databases   (small, IO-sensitive → SSD)
+/mnt/data/     bulk data: Immich library, NAS shares, Drive mirror (→ HDD)
+```
+
+Paths stay the same when disks change: the SSD becomes the OS disk holding
+`/srv`, and the HDD is mounted at `/mnt/data`. It also gives backups a single
+root to cover. On the Mac mini the plan is:
 
 - Now: everything on the HDD (`DB_STORAGE_TYPE=HDD` for Immich).
 - When the SSD arrives: OS, `/srv/*` and all databases on the SSD; bulk media

@@ -8,7 +8,7 @@ server.
 | Stack | Host | Status |
 |---|---|---|
 | [omada](stacks/omada/) | macmini | ready |
-| immich | macmini | planned |
+| [immich](stacks/immich/) | macmini | ready |
 | homeassistant, esphome | macmini | planned (migrating from the Pi) |
 
 Design decisions and their reasons are in [docs/architecture.md](docs/architecture.md).

@@ -1,33 +1,78 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":dependencyDashboard", "docker:pinDigests"],
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    "docker:pinDigests"
+  ],
   "timezone": "America/New_York",
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
       "description": "Stateful services migrate data on upgrade and cannot be downgraded: never automerge, one PR per image.",
-      "matchDatasources": ["docker"],
+      "matchDatasources": [
+        "docker"
+      ],
       "automerge": false
     },
     {
       "description": "Major versions need a read of the release notes first; wait for approval on the dashboard.",
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["major"],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "dependencyDashboardApproval": true
     },
     {
       "description": "Omada controller: take a controller backup before merging (see stacks/omada/README.md).",
-      "matchPackageNames": ["mbentley/omada-controller"],
-      "prBodyNotes": ["**Before merging:** download a controller backup (Settings > Maintenance > Backup). Omada upgrades cannot be rolled back."]
+      "matchPackageNames": [
+        "mbentley/omada-controller"
+      ],
+      "prBodyNotes": [
+        "**Before merging:** download a controller backup (Settings > Maintenance > Backup). Omada upgrades cannot be rolled back."
+      ]
     },
     {
       "description": "Portainer runs outside GitOps: merging is not enough, re-run bootstrap.sh on each host.",
-      "matchPackageNames": ["portainer/portainer-ce"],
-      "prBodyNotes": ["**After merging:** `git pull && sudo ./bootstrap.sh <host>` on each host to apply."]
+      "matchPackageNames": [
+        "portainer/portainer-ce"
+      ],
+      "prBodyNotes": [
+        "**After merging:** `git pull && sudo ./bootstrap.sh <host>` on each host to apply."
+      ]
+    },
+    {
+      "description": "Immich server and machine-learning versions must match: one PR for both.",
+      "matchPackageNames": [
+        "ghcr.io/immich-app/immich-server",
+        "ghcr.io/immich-app/immich-machine-learning"
+      ],
+      "groupName": "immich",
+      "prBodyNotes": [
+        "**Before merging:** read the Immich release notes for breaking changes, and diff the release's docker-compose.yml against stacks/immich (see its README). Immich makes its own database dump daily; for a major upgrade, trigger one first (Administration > Job Queues > Create Database Dump)."
+      ]
+    },
+    {
+      "description": "Immich's Postgres image changes only when upstream's compose file changes it (a version jump needs a data migration). Allow digest refreshes, never tag changes.",
+      "matchPackageNames": [
+        "ghcr.io/immich-app/postgres"
+      ],
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch"
+      ],
+      "enabled": false
     },
     {
       "description": "CI-only dependencies are low risk.",
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "automerge": true
     }
   ]
