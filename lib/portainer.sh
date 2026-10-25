@@ -133,7 +133,11 @@ portainer_ensure_git_source() {
 
   pt_api GET /gitops/sources
   [[ $PT_STATUS == 200 ]] || pt_fail "listing git sources failed"
-  PT_SOURCE_ID=$(U=$url jq -r '[.[] | select(.url == env.U)][0].id // empty' "$PT_RESP")
+  # Portainer stores source URLs normalized (lowercase scheme/host, no trailing
+  # "/" or ".git"), so compare that way or a re-run won't find the source.
+  PT_SOURCE_ID=$(U=$url jq -r '
+    def norm: ascii_downcase | sub("/+$"; "") | rtrimstr(".git");
+    [.[] | select((.url | norm) == (env.U | norm))][0].id // empty' "$PT_RESP")
 
   # Credentials are optional: the repo is public, so Portainer clones
   # anonymously unless PORTAINER_GIT_TOKEN is set (e.g. if it goes private).
