@@ -8,21 +8,25 @@ fail=0
 err() { printf 'FAIL: %s\n' "$*" >&2; fail=1; }
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 
-# 1. Every compose file renders. The project directory holds stack.env, which
-#    mirrors Portainer: it runs compose with the clone root as the project
-#    directory and writes stack.env there, so `env_file: stack.env` resolves.
+# 1. Every compose file renders, in Portainer's layout: stack.env at the repo
+#    root, compose file under stacks/<s>/. Relative paths in a compose file
+#    resolve from its own directory, so this catches a wrong env_file path.
+[[ -e stack.env ]] && { err "remove ./stack.env first (validate.sh writes its own)"; exit 1; }
+trap 'rm -rf "$tmp" stack.env' EXIT
 for dir in stacks/*/; do
   stack=$(basename "$dir")
   [[ -f $dir/docker-compose.yml ]] || { err "$dir has no docker-compose.yml"; continue; }
   [[ -f $dir/stack.env.example ]] || { err "$dir has no stack.env.example"; continue; }
-  cp "$dir/stack.env.example" "$tmp/stack.env"
-  if docker compose --project-directory "$tmp" --env-file "$tmp/stack.env" \
-       -f "$dir/docker-compose.yml" config -q; then
+  cp "$dir/stack.env.example" stack.env
+  # No --project-directory: like Portainer, compose then resolves relative
+  # paths from the compose file's own directory.
+  if docker compose --env-file stack.env -f "$dir/docker-compose.yml" config -q; then
     echo "ok   compose: $stack"
   else
     err "compose config failed: $stack"
   fi
 done
+rm -f stack.env
 if PORTAINER_DATA_DIR=/tmp/portainer docker compose -f platform/portainer/docker-compose.yml config -q; then
   echo "ok   compose: platform/portainer"
 else

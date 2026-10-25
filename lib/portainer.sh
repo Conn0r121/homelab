@@ -214,7 +214,14 @@ deploy_stack() {
             Env: (env.ST_ENV | fromjson)}' > "$HL_TMP/body.json"
     pt_api POST "/stacks/create/standalone/repository?endpointId=$PT_ENDPOINT_ID" "$HL_TMP/body.json"
     [[ $PT_STATUS == 200 ]] || pt_fail "creating stack '$stack' failed"
-    ok "$stack: created and deployed"
+    # Portainer deploys new Git stacks asynchronously: a 200 only means the
+    # stack was saved. Wait for its containers so a failed deploy is visible.
+    info "$stack: created; waiting for Portainer to deploy it (first pulls can take minutes)"
+    if wait_for_containers "$stack" 600; then
+      ok "$stack: created and deployed"
+    else
+      warn "$stack: no containers after 10 minutes. Check Portainer > Stacks > $stack for the deploy error; re-running bootstrap retries the deploy"
+    fi
     return
   fi
 
@@ -228,21 +235,52 @@ deploy_stack() {
   current_env=$(jq -c '(.Env // []) | map({name, value}) | sort_by(.name)' <<< "$existing")
   current_ref=$(jq -r '.GitConfig.ReferenceName' <<< "$existing")
   current_compose=$(jq -r '.GitConfig.ConfigFilePath' <<< "$existing")
-  if [[ $current_env == "$env_json" && $current_ref == "$ref" && $current_compose == "$compose" ]]; then
+  local settings_match=0
+  [[ $current_env == "$env_json" && $current_ref == "$ref" && $current_compose == "$compose" ]] && settings_match=1
+
+  # A stack whose deploy failed exists in Portainer with matching settings but
+  # no containers; redeploy it instead of calling it up to date. Portainer uses
+  # the stack name as the compose project name.
+  local containers
+  containers=$(docker ps -aq --filter "label=com.docker.compose.project=$stack" | wc -l)
+  if ((settings_match && containers > 0)); then
     ok "$stack: up to date (id=$id)"
     return
   fi
+  ((containers == 0)) && warn "$stack: exists in Portainer but has no containers; redeploying"
 
-  jq -n '{SourceID: (env.ST_SRC | tonumber), RepositoryReferenceName: env.ST_REF,
-          ConfigFilePath: env.ST_COMPOSE, Env: (env.ST_ENV | fromjson), Prune: false}' > "$HL_TMP/body.json"
-  pt_api POST "/stacks/$id/git?endpointId=$PT_ENDPOINT_ID" "$HL_TMP/body.json"
-  [[ $PT_STATUS == 200 ]] || pt_fail "updating stack '$stack' failed"
+  if ((!settings_match)); then
+    jq -n '{SourceID: (env.ST_SRC | tonumber), RepositoryReferenceName: env.ST_REF,
+            ConfigFilePath: env.ST_COMPOSE, Env: (env.ST_ENV | fromjson), Prune: false}' > "$HL_TMP/body.json"
+    pt_api POST "/stacks/$id/git?endpointId=$PT_ENDPOINT_ID" "$HL_TMP/body.json"
+    [[ $PT_STATUS == 200 ]] || pt_fail "updating stack '$stack' failed"
+  fi
 
   jq -n '{RepositoryReferenceName: env.ST_REF, Env: (env.ST_ENV | fromjson),
           Prune: false, RepullImageAndRedeploy: false}' > "$HL_TMP/body.json"
   pt_api PUT "/stacks/$id/git/redeploy?endpointId=$PT_ENDPOINT_ID" "$HL_TMP/body.json"
   [[ $PT_STATUS == 200 ]] || pt_fail "redeploying stack '$stack' failed"
-  ok "$stack: updated and redeployed (id=$id)"
+  # Like create, a Compose redeploy runs asynchronously in Portainer.
+  if ((containers == 0)); then
+    if wait_for_containers "$stack" 600; then
+      ok "$stack: redeployed (id=$id)"
+    else
+      warn "$stack: still no containers after 10 minutes. Check Portainer > Stacks > $stack for the deploy error"
+    fi
+  else
+    ok "$stack: settings updated, redeploy started (id=$id)"
+  fi
+}
+
+# wait_for_containers STACK SECONDS — true once the stack's compose project has
+# at least one container. Portainer uses the stack name as the project name.
+wait_for_containers() {
+  local stack=$1 deadline=$((SECONDS + $2))
+  while ((SECONDS < deadline)); do
+    [[ -n $(docker ps -aq --filter "label=com.docker.compose.project=$stack") ]] && return 0
+    sleep 5
+  done
+  return 1
 }
 
 # Stacks that exist in Portainer but aren't listed in STACKS are reported,
