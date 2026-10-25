@@ -89,13 +89,17 @@ host if missing. Existing directories are never re-owned.
 
 - Env vars set through the API are written to `stack.env` in the **root of
   Portainer's clone** (`api/exec/compose_stack.go`, `createEnvFile`).
-- Compose runs with the **clone root as its working directory**
-  (`libstack.Options{WorkingDir: stack.ProjectPath}`). Relative paths in a
-  compose file under `stacks/<s>/` therefore resolve against the repo root.
-  That means `env_file: stack.env` finds Portainer's file.
+- Relative paths **inside** a compose file (`env_file:`, bind mounts) resolve
+  relative to **that compose file's directory**, not the clone root, even
+  though Portainer sets the working directory to the clone root. A stack at
+  `stacks/<s>/` must therefore use `env_file: ../../stack.env`.
+  (Learned the hard way: `env_file: stack.env` failed with "env file
+  /data/compose/<id>/stacks/immich/stack.env not found".)
 - The same file is also passed as `--env-file`, so `${VAR}` interpolation
-  works too. Omada uses interpolation; Immich will use `env_file:`, following
-  the upstream compose file.
+  works without any `env_file:` line. Omada uses only interpolation; Immich
+  uses `env_file: ../../stack.env`, following the upstream compose file.
+- `scripts/validate.sh` mirrors this layout (stack.env at the repo root,
+  compose file in `stacks/<s>/`), so a wrong path fails CI, not the deploy.
 - `COMPOSE_PROFILES` set in `stack.env` is honored: Portainer loads the env
   file and then applies default profiles from it (`cli.WithDotEnv`, then
   `cli.WithDefaultProfiles()`). Immich uses this to make machine learning

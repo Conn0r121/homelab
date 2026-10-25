@@ -124,7 +124,8 @@ one:
 ## Add a stack
 
 1. Create `stacks/<name>/docker-compose.yml`. Pin images as `tag@sha256:…`.
-   Reference host values as `${VAR}` or via `env_file: stack.env`.
+   Reference host values as `${VAR}`, or pass them all to a container with
+   `env_file: ../../stack.env` (Portainer writes `stack.env` at the repo root).
 2. List every variable it needs in `stacks/<name>/stack.env.example`.
 3. Add the values to `hosts/<host>/host.env` (prefix with `<NAME>__`) or secrets,
    and add `<name>` to `STACKS`.

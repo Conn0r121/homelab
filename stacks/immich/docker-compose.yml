@@ -2,7 +2,8 @@
 # https://github.com/immich-app/immich/releases/download/v3.3.5/docker-compose.yml
 #
 # Deliberate differences from upstream (keep them when diffing a new release):
-#   - env_file is stack.env (written by Portainer) instead of .env
+#   - env_file is ../../stack.env (written by Portainer at the repo root of
+#     its clone; env_file paths resolve relative to THIS file) instead of .env
 #   - server/ML images are pinned by tag + digest instead of ${IMMICH_VERSION},
 #     so Renovate can track them (grouped into one PR; versions must match)
 #   - machine learning only runs with the "ml" compose profile; set
@@ -24,7 +25,7 @@ services:
       # Administration > External Libraries:
       # - /mnt/media/photos:/mnt/external/photos:ro
     env_file:
-      - stack.env
+      - ../../stack.env
     ports:
       - '2283:2283'
     depends_on:
@@ -41,7 +42,7 @@ services:
     volumes:
       - model-cache:/cache
     env_file:
-      - stack.env
+      - ../../stack.env
     restart: always
     healthcheck:
       disable: false
